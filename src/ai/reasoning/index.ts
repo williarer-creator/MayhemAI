@@ -109,7 +109,6 @@ export interface ProcessRecommendation {
  * Engineering reasoning engine
  */
 export class EngineeringReasoner {
-  private materials: Material[] = [];
   private processes: ManufacturingProcess[] = [];
 
   constructor() {
@@ -117,55 +116,10 @@ export class EngineeringReasoner {
   }
 
   private initializeKnowledgeBase(): void {
-    // TODO: Load material and process databases
-    // This would typically come from a database or API
-    this.materials = [
-      {
-        name: '6061-T6 Aluminum',
-        type: 'aluminum',
-        grade: '6061-T6',
-        properties: {
-          density: 2700,
-          yieldStrength: 276,
-          tensileStrength: 310,
-          elasticModulus: 68.9,
-          thermalExpansion: 23.6,
-          corrosionResistance: 'good',
-        },
-        costPerKg: 3.5,
-        availability: 'stock',
-      },
-      {
-        name: '304 Stainless Steel',
-        type: 'stainless',
-        grade: '304',
-        properties: {
-          density: 8000,
-          yieldStrength: 215,
-          tensileStrength: 505,
-          elasticModulus: 193,
-          thermalExpansion: 17.3,
-          corrosionResistance: 'excellent',
-        },
-        costPerKg: 4.0,
-        availability: 'stock',
-      },
-      {
-        name: 'A36 Steel',
-        type: 'steel',
-        grade: 'A36',
-        properties: {
-          density: 7850,
-          yieldStrength: 250,
-          tensileStrength: 400,
-          elasticModulus: 200,
-          thermalExpansion: 11.7,
-          corrosionResistance: 'poor',
-        },
-        costPerKg: 1.0,
-        availability: 'stock',
-      },
-    ];
+    // TODO: Load material and process databases from external sources
+    // Materials will be loaded from BE Group, Misumi, etc.
+    // Processes will be loaded from Sandvik Coromant machining data
+    console.log('[Reasoning] Knowledge base initialization pending external data sources');
   }
 
   /**

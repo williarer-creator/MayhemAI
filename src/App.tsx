@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { initKernel, isKernelReady } from './core/kernel';
+import { initKernel } from './core/kernel';
 
 function App() {
   const [kernelStatus, setKernelStatus] = useState<'loading' | 'ready' | 'error'>('loading');
