@@ -109,13 +109,16 @@ Supporting loads or spanning distances.
 - [x] Load calculation basics - Moment, shear, deflection, and interaction checks
 - [x] Connection details (bolted, welded) - Shear tabs, angles, moment connections per AISC 360
 
-### Phase 4: Enclosure Domain
+### Phase 4: Enclosure Domain ✓
 **Goal:** Guards and covers for safety/protection
 
-- [ ] Machine guards (fixed, interlocked)
-- [ ] Equipment covers
-- [ ] Access panels and doors
-- [ ] Sheet metal fabrication rules
+- [x] Machine guards (fixed, interlocked) - Guards with ISO 13857 safety distances
+- [x] Equipment covers - IP/NEMA rated enclosures with thermal management
+- [x] Access panels and doors - Hinged/removable panels, fire-rated doors, ADA compliance
+- [x] Windows and louvers - Viewports with glazing calcs, louvers with airflow calcs
+- [x] Perimeter fencing - Modular fencing with posts, mesh panels, ISO 14120 compliance
+- [x] Safety gates and interlocks - Swing/sliding gates with ISO 14119 interlocks
+- [x] Sheet metal fabrication rules - K-factor, bend allowance, material database, gauge tables
 
 ### Phase 5: Flow Domain
 **Goal:** Routing pipes, ducts, cables
