@@ -120,13 +120,13 @@ Supporting loads or spanning distances.
 - [x] Safety gates and interlocks - Swing/sliding gates with ISO 14119 interlocks
 - [x] Sheet metal fabrication rules - K-factor, bend allowance, material database, gauge tables
 
-### Phase 5: Flow Domain
+### Phase 5: Flow Domain ✓
 **Goal:** Routing pipes, ducts, cables
 
-- [ ] Pipe routing with obstacle avoidance
-- [ ] Duct routing and transitions
-- [ ] Cable tray layout
-- [ ] Support and hanger placement
+- [x] Pipe routing - ASME B31.1/B31.3 piping with sizes, schedules, fittings, routing
+- [x] Duct routing and transitions - SMACNA ductwork with sizing, gauge selection, fittings
+- [x] Cable tray layout - NEC/NEMA cable trays, conduit, fill calculations
+- [x] Support and hanger placement - MSS SP-58 pipe supports, SMACNA duct hangers, NEMA tray supports
 
 ### Phase 6: Mechanical Domain
 **Goal:** Moving connections
