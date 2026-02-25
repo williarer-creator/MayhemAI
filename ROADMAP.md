@@ -128,12 +128,12 @@ Supporting loads or spanning distances.
 - [x] Cable tray layout - NEC/NEMA cable trays, conduit, fill calculations
 - [x] Support and hanger placement - MSS SP-58 pipe supports, SMACNA duct hangers, NEMA tray supports
 
-### Phase 6: Mechanical Domain
+### Phase 6: Mechanical Domain ✓
 **Goal:** Moving connections
 
-- [ ] Linkage design
-- [ ] Shaft and coupling selection
-- [ ] Motion analysis basics
+- [x] Linkage design - Four-bar, slider-crank, bell crank with Grashof analysis
+- [x] Shaft and coupling selection - Torsional stress, deflection, critical speed per ASME B106.1M
+- [x] Motion analysis basics - Kinematic analysis, bearing selection (ISO 281), coupling selection (AGMA 9002)
 
 ---
 
