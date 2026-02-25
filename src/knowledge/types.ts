@@ -65,7 +65,11 @@ export type ConnectionType =
   | 'horizontal-span'       // across a gap (walkways, bridges)
   | 'point-to-point'        // generic A to B (pipes, ducts)
   | 'surface-mount'         // attached to a surface (brackets, guards)
-  | 'volume-enclosure';     // surrounding a volume (housings, guards)
+  | 'volume-enclosure'      // surrounding a volume (housings, guards)
+  | 'vertical-support'      // column supporting load above
+  | 'foundation'            // connection to foundation/ground
+  | 'lateral-system'        // bracing for lateral loads
+  | 'beam-connection';      // beam-to-column or beam-to-beam
 
 export interface ParameterDefinition {
   id: string;
@@ -106,7 +110,7 @@ export type RuleExpression =
 export interface ComponentDefinition {
   id: string;
   name: string;
-  type: 'structural' | 'surface' | 'fastener' | 'accessory';
+  type: 'structural' | 'surface' | 'fastener' | 'accessory' | 'connector' | 'material' | 'connection';
   required: boolean;
   quantity: 'single' | 'per-unit' | 'calculated';
   quantityFormula?: string;

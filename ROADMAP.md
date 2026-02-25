@@ -99,15 +99,15 @@ Supporting loads or spanning distances.
 - [ ] Handrails and guardrails (as supporting elements)
 - [ ] Combined solutions (platform + stairs + ladder)
 
-### Phase 3: Structure Domain
+### Phase 3: Structure Domain ✓
 **Goal:** Structural support for ACCESS elements
 
-- [ ] Beams (I-beam, channel, tube)
-- [ ] Columns and posts
-- [ ] Bracing systems
-- [ ] Base plates and anchors
-- [ ] Load calculation basics
-- [ ] Connection details (bolted, welded)
+- [x] Beams (I-beam, channel, tube) - Steel and wood beams with span/deflection calculations
+- [x] Columns and posts - Steel and wood columns with buckling analysis (AISC/NDS)
+- [x] Bracing systems - Diagonal and horizontal bracing with capacity checks
+- [x] Base plates and anchors - Complete base plate design with anchor calculations (ACI 318)
+- [x] Load calculation basics - Moment, shear, deflection, and interaction checks
+- [x] Connection details (bolted, welded) - Shear tabs, angles, moment connections per AISC 360
 
 ### Phase 4: Enclosure Domain
 **Goal:** Guards and covers for safety/protection
