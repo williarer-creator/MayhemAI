@@ -135,6 +135,57 @@ Supporting loads or spanning distances.
 - [x] Shaft and coupling selection - Torsional stress, deflection, critical speed per ASME B106.1M
 - [x] Motion analysis basics - Kinematic analysis, bearing selection (ISO 281), coupling selection (AGMA 9002)
 
+### Phase 7: Geometry Generation
+**Goal:** Connect knowledge to OpenCascade 3D models
+
+- [ ] Geometry builder framework - Parametric model generation from element parameters
+- [ ] Access geometry - Stairs, ladders, ramps, platforms as 3D solids
+- [ ] Structure geometry - Beams, columns, connections as 3D assemblies
+- [ ] Enclosure geometry - Panels, guards, fencing as sheet metal parts
+- [ ] Flow geometry - Pipes, ducts, cable trays as routed solids
+- [ ] Mechanical geometry - Shafts, linkages, brackets
+- [ ] Assembly builder - Combine elements into complete assemblies
+- [ ] Geometry validation - Clearance checks, interference detection
+
+### Phase 8: Manufacturing Output
+**Goal:** Generate production-ready files
+
+- [ ] G-code post-processor framework - Configurable for different machines
+- [ ] CNC mill output - 3-axis and 5-axis toolpaths
+- [ ] CNC lathe output - Turning, facing, threading operations
+- [ ] Laser/plasma cutting - DXF with nesting optimization
+- [ ] Drawing generation - 2D views, dimensions, GD&T
+- [ ] BOM generator - Part lists, cut lists, hardware schedules
+- [ ] Assembly instructions - Step-by-step build sequences
+
+### Phase 9: AI Reasoning Integration
+**Goal:** Intelligent design decisions
+
+- [ ] Claude API integration - Connect to Anthropic API for reasoning
+- [ ] Domain selector - Classify problem type from requirements
+- [ ] Natural language parser - Extract constraints from text descriptions
+- [ ] Solution optimizer - Cost, weight, manufacturability trade-offs
+- [ ] Design explainer - Generate reasoning documentation
+- [ ] Code compliance checker - Validate against IBC, OSHA, ADA
+
+### Phase 10: Input Processing
+**Goal:** Accept real-world inputs
+
+- [ ] Point cloud processor - LiDAR/photogrammetry to surfaces
+- [ ] Image feature extraction - Detect walls, floors, obstacles from photos
+- [ ] Environment modeler - Build spatial model from scans
+- [ ] Constraint extractor - Identify attachment points, clearances
+- [ ] Scan-to-CAD pipeline - Complete workflow from scan to geometry
+
+### Phase 11: End-to-End Integration
+**Goal:** Complete working system
+
+- [ ] "Stairs Between Two Points" milestone - Full demo scenario
+- [ ] Multi-domain solutions - Platform + stairs + handrail assemblies
+- [ ] Interactive refinement - User feedback loop for design iteration
+- [ ] Manufacturing validation - Verify outputs are production-ready
+- [ ] Documentation generator - Complete engineering packages
+
 ---
 
 ## Technical Architecture
