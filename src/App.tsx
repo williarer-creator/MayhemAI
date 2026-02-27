@@ -10,9 +10,10 @@ import { theme, GlobalStyles } from './ui/styles';
 import { MainLayout } from './ui/components/layout';
 import { Viewer3D } from './ui/components/viewer';
 import { Button } from './ui/components/common';
+import { useInputStore, usePipelineStore } from './ui/stores';
 import styled from 'styled-components';
 
-// Temporary placeholder components until Phase 2/3/4 are complete
+// Styled components for panels
 const PlaceholderContent = styled.div`
   display: flex;
   flex-direction: column;
@@ -63,27 +64,126 @@ const InfoText = styled.p`
   line-height: 1.5;
 `;
 
-const StatusItem = styled.div`
+const StatusItem = styled.div<{ $active?: boolean }>`
   display: flex;
   align-items: center;
   gap: ${theme.spacing.sm};
   padding: ${theme.spacing.sm};
-  background: ${theme.colors.bg.primary};
+  background: ${({ $active }) => $active ? theme.colors.bg.hover : theme.colors.bg.primary};
   border-radius: ${theme.radius.sm};
   font-size: ${theme.typography.sizes.sm};
+  transition: background ${theme.transitions.fast};
 `;
 
-const StatusDot = styled.span<{ $status: 'pending' | 'running' | 'completed' }>`
+const StatusDot = styled.span<{ $status: 'pending' | 'running' | 'completed' | 'failed' }>`
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: ${({ $status }) => theme.colors.pipeline[$status]};
+  ${({ $status }) => $status === 'running' && `
+    animation: pulse 1s ease-in-out infinite;
+  `}
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+`;
+
+const ResultCard = styled.div`
+  background: ${theme.colors.bg.primary};
+  border-radius: ${theme.radius.sm};
+  padding: ${theme.spacing.sm};
+  margin-top: ${theme.spacing.sm};
+`;
+
+const ResultLabel = styled.span`
+  color: ${theme.colors.text.tertiary};
+  font-size: ${theme.typography.sizes.xs};
+`;
+
+const ResultValue = styled.span`
+  color: ${theme.colors.text.primary};
+  font-size: ${theme.typography.sizes.sm};
+  font-weight: ${theme.typography.weights.medium};
+`;
+
+const BOMTable = styled.table`
+  width: 100%;
+  font-size: ${theme.typography.sizes.xs};
+  margin-top: ${theme.spacing.sm};
+
+  th, td {
+    padding: ${theme.spacing.xs};
+    text-align: left;
+    border-bottom: 1px solid ${theme.colors.border.subtle};
+  }
+
+  th {
+    color: ${theme.colors.text.tertiary};
+    font-weight: ${theme.typography.weights.medium};
+  }
+
+  td {
+    color: ${theme.colors.text.secondary};
+  }
+`;
+
+const ErrorBanner = styled.div`
+  background: rgba(252, 129, 129, 0.1);
+  border: 1px solid ${theme.colors.accent.error};
+  border-radius: ${theme.radius.sm};
+  padding: ${theme.spacing.sm};
+  color: ${theme.colors.accent.error};
+  font-size: ${theme.typography.sizes.sm};
+`;
+
+const WarningBanner = styled.div`
+  background: rgba(246, 173, 85, 0.1);
+  border: 1px solid ${theme.colors.accent.highlight};
+  border-radius: ${theme.radius.sm};
+  padding: ${theme.spacing.sm};
+  color: ${theme.colors.accent.highlight};
+  font-size: ${theme.typography.sizes.sm};
+  max-height: 100px;
+  overflow-y: auto;
+`;
+
+const SuccessBanner = styled.div`
+  background: rgba(72, 187, 120, 0.1);
+  border: 1px solid ${theme.colors.accent.success};
+  border-radius: ${theme.radius.sm};
+  padding: ${theme.spacing.sm};
+  color: ${theme.colors.accent.success};
+  font-size: ${theme.typography.sizes.sm};
 `;
 
 function App() {
   const [kernelStatus, setKernelStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [description, setDescription] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Input store
+  const {
+    description,
+    setDescription,
+    startPoint,
+    endPoint,
+    codes,
+    loadTemplate,
+  } = useInputStore();
+
+  // Pipeline store
+  const {
+    isRunning,
+    statusHistory,
+    result,
+    aiResult,
+    manufacturingPackage,
+    processingTime,
+    errors,
+    warnings,
+    runPipeline,
+    resetPipeline,
+  } = usePipelineStore();
 
   useEffect(() => {
     initKernel()
@@ -94,11 +194,28 @@ function App() {
       });
   }, []);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!description.trim()) return;
-    setIsProcessing(true);
-    // Pipeline integration will be added in Phase 3
-    setTimeout(() => setIsProcessing(false), 2000);
+
+    await runPipeline({
+      description,
+      endpoints: {
+        start: {
+          position: startPoint.position,
+          type: startPoint.type,
+        },
+        end: {
+          position: endPoint.position,
+          type: endPoint.type,
+        },
+      },
+    }, 'MayhemAI Design');
+  };
+
+  const getStageStatus = (stage: string): 'pending' | 'running' | 'completed' | 'failed' => {
+    const stageInfo = statusHistory.find(s => s.stage === stage);
+    if (!stageInfo) return 'pending';
+    return stageInfo.status as 'pending' | 'running' | 'completed' | 'failed';
   };
 
   // Left panel content - Design Input
@@ -110,16 +227,26 @@ function App() {
           placeholder="Describe what you want to build...&#10;&#10;Example: Build stairs from ground floor to mezzanine level door, 3 meters elevation change, commercial building, must comply with IBC and ADA requirements, steel construction preferred"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          disabled={isRunning}
         />
-        <div style={{ marginTop: theme.spacing.md }}>
+        <div style={{ marginTop: theme.spacing.md, display: 'flex', gap: theme.spacing.sm }}>
           <Button
             fullWidth
             onClick={handleGenerate}
-            disabled={!description.trim() || kernelStatus !== 'ready'}
-            loading={isProcessing}
+            disabled={!description.trim() || kernelStatus !== 'ready' || isRunning}
+            loading={isRunning}
           >
-            Generate Design
+            {isRunning ? 'Generating...' : 'Generate Design'}
           </Button>
+          {result && (
+            <Button
+              variant="ghost"
+              onClick={resetPipeline}
+              disabled={isRunning}
+            >
+              Reset
+            </Button>
+          )}
         </div>
       </Section>
 
@@ -129,21 +256,36 @@ function App() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setDescription('Build stairs from ground floor to mezzanine level door, 3 meters elevation change, commercial building, must comply with IBC and ADA requirements, steel construction preferred')}
+            disabled={isRunning}
+            onClick={() => loadTemplate({
+              description: 'Build stairs from ground floor to mezzanine level door, 3 meters elevation change, commercial building, must comply with IBC and ADA requirements, steel construction preferred',
+              startPoint: { position: { x: 0, y: 0, z: 0 }, type: 'floor' },
+              endPoint: { position: { x: 4000, y: 0, z: 3000 }, type: 'opening' },
+            })}
           >
             Stairs Between Two Points
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setDescription('Create access to elevated equipment platform at 4m height, need primary stair access plus emergency ladder, OSHA compliant, outdoor installation')}
+            disabled={isRunning}
+            onClick={() => loadTemplate({
+              description: 'Create access to elevated equipment platform at 4m height, need primary stair access plus emergency ladder, OSHA compliant, outdoor installation',
+              startPoint: { position: { x: 0, y: 0, z: 0 }, type: 'floor' },
+              endPoint: { position: { x: 3000, y: 0, z: 4000 }, type: 'structure' },
+            })}
           >
             Platform Access System
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setDescription('ADA compliant wheelchair ramp from parking level to building entrance, 600mm rise, maximum slope 1:12, with handrails on both sides')}
+            disabled={isRunning}
+            onClick={() => loadTemplate({
+              description: 'ADA compliant wheelchair ramp from parking level to building entrance, 600mm rise, maximum slope 1:12, with handrails on both sides',
+              startPoint: { position: { x: 0, y: 0, z: 0 }, type: 'floor' },
+              endPoint: { position: { x: 7200, y: 0, z: 600 }, type: 'opening' },
+            })}
           >
             ADA Wheelchair Ramp
           </Button>
@@ -151,10 +293,15 @@ function App() {
       </Section>
 
       <Section>
-        <SectionTitle>Endpoints</SectionTitle>
+        <SectionTitle>Configuration</SectionTitle>
         <InfoText>
-          Point A and Point B configuration will be available here.
-          For now, endpoints are extracted from the description.
+          Start: ({startPoint.position.x}, {startPoint.position.y}, {startPoint.position.z}) - {startPoint.type}
+        </InfoText>
+        <InfoText>
+          End: ({endPoint.position.x}, {endPoint.position.y}, {endPoint.position.z}) - {endPoint.type}
+        </InfoText>
+        <InfoText style={{ marginTop: theme.spacing.sm }}>
+          Codes: {codes.join(', ') || 'None selected'}
         </InfoText>
       </Section>
     </PlaceholderContent>
@@ -166,54 +313,155 @@ function App() {
       <Section>
         <SectionTitle>Pipeline Progress</SectionTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.xs }}>
-          <StatusItem>
-            <StatusDot $status="pending" />
-            <span>Input Processing</span>
-          </StatusItem>
-          <StatusItem>
-            <StatusDot $status="pending" />
-            <span>Domain Classification</span>
-          </StatusItem>
-          <StatusItem>
-            <StatusDot $status="pending" />
-            <span>Solution Generation</span>
-          </StatusItem>
-          <StatusItem>
-            <StatusDot $status="pending" />
-            <span>Geometry Generation</span>
-          </StatusItem>
-          <StatusItem>
-            <StatusDot $status="pending" />
-            <span>Manufacturing Output</span>
-          </StatusItem>
+          {[
+            { stage: 'input-processing', label: 'Input Processing' },
+            { stage: 'requirement-analysis', label: 'Requirement Analysis' },
+            { stage: 'domain-classification', label: 'Domain Classification' },
+            { stage: 'solution-generation', label: 'Solution Generation' },
+            { stage: 'geometry-generation', label: 'Geometry Generation' },
+            { stage: 'validation', label: 'Validation' },
+            { stage: 'manufacturing-output', label: 'Manufacturing Output' },
+          ].map(({ stage, label }) => (
+            <StatusItem key={stage} $active={getStageStatus(stage) === 'running'}>
+              <StatusDot $status={getStageStatus(stage)} />
+              <span>{label}</span>
+            </StatusItem>
+          ))}
         </div>
       </Section>
 
-      <Section>
-        <SectionTitle>Bill of Materials</SectionTitle>
-        <InfoText>
-          BOM will appear here after design generation.
-        </InfoText>
-      </Section>
+      {errors.length > 0 && (
+        <ErrorBanner>
+          <strong>Errors:</strong>
+          <ul style={{ margin: '4px 0 0 16px' }}>
+            {errors.map((e, i) => <li key={i}>{e}</li>)}
+          </ul>
+        </ErrorBanner>
+      )}
 
-      <Section>
-        <SectionTitle>Validation</SectionTitle>
-        <InfoText>
-          Code compliance and validation results will be shown here.
-        </InfoText>
-      </Section>
+      {result?.success && (
+        <SuccessBanner>
+          Design generated successfully in {processingTime}ms
+        </SuccessBanner>
+      )}
+
+      {aiResult && (
+        <Section>
+          <SectionTitle>AI Analysis</SectionTitle>
+          <ResultCard>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <ResultLabel>Domain:</ResultLabel>
+              <ResultValue>{aiResult.classification.primaryDomain}</ResultValue>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <ResultLabel>Element Type:</ResultLabel>
+              <ResultValue>{aiResult.elementType.elementType}</ResultValue>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <ResultLabel>Confidence:</ResultLabel>
+              <ResultValue>{(aiResult.classification.confidence * 100).toFixed(0)}%</ResultValue>
+            </div>
+          </ResultCard>
+          {aiResult.rationale?.summary && (
+            <InfoText style={{ marginTop: theme.spacing.sm }}>
+              {aiResult.rationale.summary}
+            </InfoText>
+          )}
+        </Section>
+      )}
+
+      {manufacturingPackage && (
+        <>
+          <Section>
+            <SectionTitle>Geometry</SectionTitle>
+            <ResultCard>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <ResultLabel>Components:</ResultLabel>
+                <ResultValue>{manufacturingPackage.geometry.componentCount}</ResultValue>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <ResultLabel>Total Weight:</ResultLabel>
+                <ResultValue>{manufacturingPackage.geometry.totalWeight.toFixed(1)} kg</ResultValue>
+              </div>
+            </ResultCard>
+          </Section>
+
+          <Section>
+            <SectionTitle>Bill of Materials ({manufacturingPackage.bom.items.length} items)</SectionTitle>
+            <BOMTable>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Description</th>
+                  <th>Qty</th>
+                </tr>
+              </thead>
+              <tbody>
+                {manufacturingPackage.bom.items.slice(0, 10).map((item, i) => (
+                  <tr key={i}>
+                    <td>{item.itemNumber}</td>
+                    <td>{item.description}</td>
+                    <td>{item.quantity}</td>
+                  </tr>
+                ))}
+                {manufacturingPackage.bom.items.length > 10 && (
+                  <tr>
+                    <td colSpan={3} style={{ textAlign: 'center', fontStyle: 'italic' }}>
+                      ... and {manufacturingPackage.bom.items.length - 10} more items
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </BOMTable>
+          </Section>
+
+          <Section>
+            <SectionTitle>Validation</SectionTitle>
+            <ResultCard>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <ResultLabel>Geometry Valid:</ResultLabel>
+                <ResultValue style={{ color: manufacturingPackage.validation.geometryValid ? theme.colors.accent.success : theme.colors.accent.error }}>
+                  {manufacturingPackage.validation.geometryValid ? 'Yes' : 'No'}
+                </ResultValue>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <ResultLabel>Code Compliant:</ResultLabel>
+                <ResultValue style={{ color: manufacturingPackage.validation.codeCompliant ? theme.colors.accent.success : theme.colors.accent.error }}>
+                  {manufacturingPackage.validation.codeCompliant ? 'Yes' : 'No'}
+                </ResultValue>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <ResultLabel>Mfg Feasible:</ResultLabel>
+                <ResultValue style={{ color: manufacturingPackage.validation.manufacturingFeasible ? theme.colors.accent.success : theme.colors.accent.error }}>
+                  {manufacturingPackage.validation.manufacturingFeasible ? 'Yes' : 'No'}
+                </ResultValue>
+              </div>
+            </ResultCard>
+          </Section>
+        </>
+      )}
+
+      {warnings.length > 0 && (
+        <WarningBanner>
+          <strong>Warnings ({warnings.length}):</strong>
+          <ul style={{ margin: '4px 0 0 16px', fontSize: '11px' }}>
+            {warnings.slice(0, 5).map((w, i) => <li key={i}>{w}</li>)}
+            {warnings.length > 5 && <li>... and {warnings.length - 5} more</li>}
+          </ul>
+        </WarningBanner>
+      )}
 
       <Section>
         <SectionTitle>Export</SectionTitle>
         <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.xs }}>
-          <Button variant="secondary" size="sm" disabled>
+          <Button variant="secondary" size="sm" disabled={!manufacturingPackage}>
             Download BOM (CSV)
+          </Button>
+          <Button variant="secondary" size="sm" disabled={!manufacturingPackage}>
+            Download Cut List
           </Button>
           <Button variant="secondary" size="sm" disabled>
             Download G-code
-          </Button>
-          <Button variant="secondary" size="sm" disabled>
-            Download DXF
           </Button>
         </div>
       </Section>
@@ -225,7 +473,7 @@ function App() {
     <Viewer3D
       showGrid={true}
       showAxes={true}
-      hasGeometry={false}
+      hasGeometry={!!manufacturingPackage}
     />
   );
 
@@ -234,8 +482,11 @@ function App() {
       <GlobalStyles />
       <MainLayout
         kernelStatus={kernelStatus}
-        pipelineStatus={isProcessing ? 'running' : 'idle'}
-        pipelineMessage={isProcessing ? 'Processing design...' : undefined}
+        pipelineStatus={isRunning ? 'running' : result?.success ? 'success' : errors.length > 0 ? 'error' : 'idle'}
+        pipelineMessage={isRunning ? 'Processing design...' : undefined}
+        componentCount={manufacturingPackage?.geometry.componentCount}
+        totalWeight={manufacturingPackage?.geometry.totalWeight}
+        processingTime={processingTime || undefined}
         leftPanelContent={leftPanelContent}
         rightPanelContent={rightPanelContent}
         viewerContent={viewerContent}
