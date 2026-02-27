@@ -213,9 +213,11 @@ function App() {
   };
 
   const getStageStatus = (stage: string): 'pending' | 'running' | 'completed' | 'failed' => {
-    const stageInfo = statusHistory.find(s => s.stage === stage);
-    if (!stageInfo) return 'pending';
-    return stageInfo.status as 'pending' | 'running' | 'completed' | 'failed';
+    // Find the LAST status entry for this stage (completed overrides running)
+    const stageEntries = statusHistory.filter(s => s.stage === stage);
+    if (stageEntries.length === 0) return 'pending';
+    const lastEntry = stageEntries[stageEntries.length - 1];
+    return lastEntry.status as 'pending' | 'running' | 'completed' | 'failed';
   };
 
   // Left panel content - Design Input
@@ -321,6 +323,7 @@ function App() {
             { stage: 'geometry-generation', label: 'Geometry Generation' },
             { stage: 'validation', label: 'Validation' },
             { stage: 'manufacturing-output', label: 'Manufacturing Output' },
+            { stage: 'documentation', label: 'Documentation' },
           ].map(({ stage, label }) => (
             <StatusItem key={stage} $active={getStageStatus(stage) === 'running'}>
               <StatusDot $status={getStageStatus(stage)} />
@@ -474,6 +477,7 @@ function App() {
       showGrid={true}
       showAxes={true}
       hasGeometry={!!manufacturingPackage}
+      assembly={manufacturingPackage?.geometry.assembly}
     />
   );
 

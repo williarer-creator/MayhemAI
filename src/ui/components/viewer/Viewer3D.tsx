@@ -3,10 +3,12 @@
  * Main Three.js canvas for 3D geometry visualization
  */
 
+import { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, GizmoHelper, GizmoViewport, Environment } from '@react-three/drei';
+import { OrbitControls, Grid, GizmoHelper, GizmoViewport, Environment, Box, Cylinder } from '@react-three/drei';
 import styled from 'styled-components';
 import { theme } from '../../styles/theme';
+import type { AssemblyResult, GeometryResult } from '../../../geometry/types';
 
 const ViewerWrapper = styled.div`
   width: 100%;
@@ -138,10 +140,130 @@ function SceneContent({
   );
 }
 
+// Component to render a single geometry piece
+function GeometryComponent({ component, color }: { component: GeometryResult; color: string }) {
+  // Convert mm to meters for Three.js (scale down by 1000)
+  const scale = 0.001;
+
+  const { bounds, elementType } = component;
+
+  // Get the diagonal vector from min to max (in CAD coordinates)
+  const dx = (bounds.max.x - bounds.min.x) * scale;
+  const dy = (bounds.max.y - bounds.min.y) * scale;
+  const dz = (bounds.max.z - bounds.min.z) * scale;
+
+  // Center position (CAD: X=run, Y=width, Z=height -> Three.js: X=X, Y=Z, Z=Y)
+  const centerX = ((bounds.min.x + bounds.max.x) / 2) * scale;
+  const centerY = ((bounds.min.z + bounds.max.z) / 2) * scale;
+  const centerZ = ((bounds.min.y + bounds.max.y) / 2) * scale;
+
+  // For diagonal elements (stringers, handrails), calculate proper orientation
+  if (elementType === 'stringer' || elementType === 'handrail' || elementType === 'rail') {
+    // Length is the 3D diagonal
+    const length = Math.sqrt(dx * dx + dz * dz);
+    const radius = elementType === 'handrail' ? 0.02 : 0.04; // 20mm or 40mm radius
+
+    // Calculate slope angle (rotation around Z axis in Three.js)
+    const slopeAngle = Math.atan2(dz, dx);
+
+    return (
+      <Cylinder
+        args={[radius, radius, length, 16]}
+        position={[centerX, centerY, centerZ]}
+        rotation={[0, 0, -slopeAngle + Math.PI / 2]}
+      >
+        <meshStandardMaterial color={color} metalness={0.8} roughness={0.3} />
+      </Cylinder>
+    );
+  }
+
+  // Rungs - horizontal cylinders across width
+  if (elementType === 'rung') {
+    const length = Math.max(dy, 0.4); // Width of rung
+    const radius = 0.015; // 15mm radius
+
+    return (
+      <Cylinder
+        args={[radius, radius, length, 16]}
+        position={[centerX, centerY, centerZ]}
+        rotation={[Math.PI / 2, 0, 0]} // Rotate to lie along Z axis (width)
+      >
+        <meshStandardMaterial color={color} metalness={0.8} roughness={0.3} />
+      </Cylinder>
+    );
+  }
+
+  // Treads - flat boxes
+  if (elementType === 'tread') {
+    return (
+      <Box
+        args={[Math.max(dx, 0.05), 0.03, Math.max(dy, 0.05)]} // Thin in Y (height)
+        position={[centerX, centerY, centerZ]}
+      >
+        <meshStandardMaterial color={color} metalness={0.5} roughness={0.5} />
+      </Box>
+    );
+  }
+
+  // Surface (ramp) - angled plate
+  if (elementType === 'surface') {
+    // Calculate the slope
+    const length = Math.sqrt(dx * dx + dz * dz);
+    const slopeAngle = Math.atan2(dz, dx);
+    const width = Math.max(dy, 0.5);
+
+    return (
+      <Box
+        args={[length, 0.05, width]} // Thin plate
+        position={[centerX, centerY, centerZ]}
+        rotation={[0, 0, -slopeAngle]}
+      >
+        <meshStandardMaterial color={color} metalness={0.4} roughness={0.6} />
+      </Box>
+    );
+  }
+
+  // Default box shape for other elements
+  return (
+    <Box
+      args={[Math.max(dx, 0.05), Math.max(dz, 0.05), Math.max(dy, 0.05)]}
+      position={[centerX, centerY, centerZ]}
+    >
+      <meshStandardMaterial color={color} metalness={0.6} roughness={0.4} />
+    </Box>
+  );
+}
+
+// Component to render entire assembly
+function AssemblyViewer({ assembly }: { assembly: AssemblyResult }) {
+  const colors: Record<string, string> = {
+    stringer: '#4a5568',
+    tread: '#718096',
+    handrail: '#63b3ed',
+    rail: '#63b3ed',
+    rung: '#a0aec0',
+    surface: '#48bb78',
+    default: '#667eea',
+  };
+
+  return (
+    <group>
+      {assembly.components.map((component, index) => (
+        <GeometryComponent
+          key={component.id || index}
+          component={component}
+          color={colors[component.elementType] || colors.default}
+        />
+      ))}
+    </group>
+  );
+}
+
 interface Viewer3DProps {
   showGrid?: boolean;
   showAxes?: boolean;
   hasGeometry?: boolean;
+  assembly?: AssemblyResult | null;
   children?: React.ReactNode;
 }
 
@@ -149,17 +271,37 @@ export function Viewer3D({
   showGrid = true,
   showAxes = true,
   hasGeometry = false,
+  assembly,
   children,
 }: Viewer3DProps) {
+  // Calculate camera position based on assembly bounds
+  const cameraPosition = useMemo((): [number, number, number] => {
+    if (assembly && assembly.bounds) {
+      const scale = 0.001;
+      const centerX = ((assembly.bounds.min.x + assembly.bounds.max.x) / 2) * scale;
+      const centerY = ((assembly.bounds.min.z + assembly.bounds.max.z) / 2) * scale;
+      const centerZ = ((assembly.bounds.min.y + assembly.bounds.max.y) / 2) * scale;
+      const maxDim = Math.max(
+        (assembly.bounds.max.x - assembly.bounds.min.x) * scale,
+        (assembly.bounds.max.z - assembly.bounds.min.z) * scale,
+        (assembly.bounds.max.y - assembly.bounds.min.y) * scale
+      );
+      const distance = maxDim * 2;
+      return [centerX + distance, centerY + distance, centerZ + distance];
+    }
+    return [10, 10, 10];
+  }, [assembly]);
+
   return (
     <ViewerWrapper>
       <Canvas
         shadows
-        camera={{ position: [10, 10, 10], fov: 45 }}
+        camera={{ position: cameraPosition, fov: 45 }}
         gl={{ antialias: true, alpha: false }}
         style={{ background: theme.colors.viewer.background }}
       >
         <SceneContent showGrid={showGrid} showAxes={showAxes} />
+        {assembly && <AssemblyViewer assembly={assembly} />}
         {children}
       </Canvas>
 

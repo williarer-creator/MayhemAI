@@ -338,172 +338,163 @@ export class MayhemAIPipeline {
     solution: DesignSolution,
     request: DesignRequest
   ): Promise<AssemblyResult> {
-    // In a full implementation, this would use the geometry builders
-    // For now, create a mock assembly result
+    const startPos = request.pointA.position;
+    const endPos = request.pointB.position;
 
-    const bounds = {
-      min: request.pointA.position,
-      max: request.pointB.position,
-    };
-
-    // Ensure min < max
-    const actualMin = {
-      x: Math.min(bounds.min.x, bounds.max.x),
-      y: Math.min(bounds.min.y, bounds.max.y),
-      z: Math.min(bounds.min.z, bounds.max.z),
-    };
-    const actualMax = {
-      x: Math.max(bounds.min.x, bounds.max.x),
-      y: Math.max(bounds.min.y, bounds.max.y),
-      z: Math.max(bounds.min.z, bounds.max.z),
-    };
+    // Calculate run and rise
+    const run = Math.abs(endPos.x - startPos.x);
+    const rise = Math.abs(endPos.z - startPos.z);
+    const width = Math.max(1000, Math.abs(endPos.y - startPos.y) || 1000); // Default 1m wide
 
     const components: GeometryResult[] = [];
     const material = (solution.parameters.material as string) || 'carbon-steel';
 
-    // Generate component placeholders based on element type
     switch (solution.elementType) {
       case 'stairs': {
-        const numRisers = (solution.parameters.numRisers as number) || 15;
+        const numRisers = (solution.parameters.numRisers as number) || Math.max(1, Math.round(rise / 180));
+        const riserHeight = rise / numRisers;
+        const treadDepth = run / numRisers;
 
-        // Stringers
-        components.push(this.createMockComponent(
-          'Left Stringer',
-          'stringer',
-          material,
-          actualMin,
-          actualMax,
-          50
-        ));
-        components.push(this.createMockComponent(
-          'Right Stringer',
-          'stringer',
-          material,
-          actualMin,
-          actualMax,
-          50
+        // Left Stringer - diagonal beam on left side
+        components.push(this.createStairComponent(
+          'Left Stringer', 'stringer', material,
+          { x: startPos.x, y: startPos.y, z: startPos.z },
+          { x: endPos.x, y: startPos.y + 100, z: endPos.z },
+          25
         ));
 
-        // Treads
+        // Right Stringer - diagonal beam on right side
+        components.push(this.createStairComponent(
+          'Right Stringer', 'stringer', material,
+          { x: startPos.x, y: startPos.y + width - 100, z: startPos.z },
+          { x: endPos.x, y: startPos.y + width, z: endPos.z },
+          25
+        ));
+
+        // Treads - horizontal steps
         for (let i = 0; i < numRisers; i++) {
-          components.push(this.createMockComponent(
-            `Tread ${i + 1}`,
-            'tread',
-            material,
-            actualMin,
-            actualMax,
-            10
+          const treadX = startPos.x + (i + 0.5) * treadDepth;
+          const treadZ = startPos.z + (i + 1) * riserHeight;
+          components.push(this.createStairComponent(
+            `Tread ${i + 1}`, 'tread', material,
+            { x: treadX - treadDepth / 2, y: startPos.y, z: treadZ - 30 },
+            { x: treadX + treadDepth / 2, y: startPos.y + width, z: treadZ },
+            8
           ));
         }
 
-        // Handrails
-        components.push(this.createMockComponent(
-          'Left Handrail',
-          'handrail',
-          material,
-          actualMin,
-          actualMax,
-          15
+        // Left Handrail - follows stringer at 900mm height
+        components.push(this.createStairComponent(
+          'Left Handrail', 'handrail', material,
+          { x: startPos.x, y: startPos.y - 50, z: startPos.z + 900 },
+          { x: endPos.x, y: startPos.y, z: endPos.z + 900 },
+          5
         ));
-        components.push(this.createMockComponent(
-          'Right Handrail',
-          'handrail',
-          material,
-          actualMin,
-          actualMax,
-          15
+
+        // Right Handrail
+        components.push(this.createStairComponent(
+          'Right Handrail', 'handrail', material,
+          { x: startPos.x, y: startPos.y + width, z: startPos.z + 900 },
+          { x: endPos.x, y: startPos.y + width + 50, z: endPos.z + 900 },
+          5
         ));
         break;
       }
 
       case 'ladder': {
-        const numRungs = (solution.parameters.numRungs as number) || 10;
+        const numRungs = (solution.parameters.numRungs as number) || Math.max(3, Math.round(rise / 300));
+        const rungSpacing = rise / (numRungs + 1);
+        const ladderWidth = 500;
 
-        // Side rails
-        components.push(this.createMockComponent(
-          'Left Rail',
-          'rail',
-          material,
-          actualMin,
-          actualMax,
-          20
+        // Left Rail
+        components.push(this.createStairComponent(
+          'Left Rail', 'rail', material,
+          { x: startPos.x, y: startPos.y, z: startPos.z },
+          { x: startPos.x + 50, y: startPos.y + 50, z: endPos.z + 300 },
+          15
         ));
-        components.push(this.createMockComponent(
-          'Right Rail',
-          'rail',
-          material,
-          actualMin,
-          actualMax,
-          20
+
+        // Right Rail
+        components.push(this.createStairComponent(
+          'Right Rail', 'rail', material,
+          { x: startPos.x, y: startPos.y + ladderWidth, z: startPos.z },
+          { x: startPos.x + 50, y: startPos.y + ladderWidth + 50, z: endPos.z + 300 },
+          15
         ));
 
         // Rungs
         for (let i = 0; i < numRungs; i++) {
-          components.push(this.createMockComponent(
-            `Rung ${i + 1}`,
-            'rung',
-            material,
-            actualMin,
-            actualMax,
-            3
+          const rungZ = startPos.z + (i + 1) * rungSpacing;
+          components.push(this.createStairComponent(
+            `Rung ${i + 1}`, 'rung', material,
+            { x: startPos.x, y: startPos.y, z: rungZ },
+            { x: startPos.x + 30, y: startPos.y + ladderWidth, z: rungZ + 30 },
+            2
           ));
         }
         break;
       }
 
       case 'ramp': {
-        components.push(this.createMockComponent(
-          'Ramp Surface',
-          'surface',
-          material,
-          actualMin,
-          actualMax,
-          200
+        // Ramp surface
+        components.push(this.createStairComponent(
+          'Ramp Surface', 'surface', material,
+          { x: startPos.x, y: startPos.y, z: startPos.z },
+          { x: endPos.x, y: startPos.y + width, z: endPos.z + 50 },
+          150
         ));
-        components.push(this.createMockComponent(
-          'Left Handrail',
-          'handrail',
-          material,
-          actualMin,
-          actualMax,
-          15
+
+        // Left Handrail
+        components.push(this.createStairComponent(
+          'Left Handrail', 'handrail', material,
+          { x: startPos.x, y: startPos.y - 50, z: startPos.z + 900 },
+          { x: endPos.x, y: startPos.y, z: endPos.z + 950 },
+          5
         ));
-        components.push(this.createMockComponent(
-          'Right Handrail',
-          'handrail',
-          material,
-          actualMin,
-          actualMax,
-          15
+
+        // Right Handrail
+        components.push(this.createStairComponent(
+          'Right Handrail', 'handrail', material,
+          { x: startPos.x, y: startPos.y + width, z: startPos.z + 900 },
+          { x: endPos.x, y: startPos.y + width + 50, z: endPos.z + 950 },
+          5
         ));
         break;
       }
 
-      default:
-        components.push(this.createMockComponent(
-          solution.elementType,
-          solution.elementType,
-          material,
-          actualMin,
-          actualMax,
-          100
+      default: {
+        components.push(this.createStairComponent(
+          solution.elementType, 'beam', material,
+          startPos,
+          endPos,
+          50
         ));
+      }
     }
 
-    // Calculate total weight from components
+    // Calculate bounds from all components
+    const allX = components.flatMap(c => [c.bounds.min.x, c.bounds.max.x]);
+    const allY = components.flatMap(c => [c.bounds.min.y, c.bounds.max.y]);
+    const allZ = components.flatMap(c => [c.bounds.min.z, c.bounds.max.z]);
+
+    const assemblyBounds = {
+      min: { x: Math.min(...allX), y: Math.min(...allY), z: Math.min(...allZ) },
+      max: { x: Math.max(...allX), y: Math.max(...allY), z: Math.max(...allZ) },
+    };
+
     const totalWeight = components.reduce((sum, c) => sum + (c.properties?.weight || 0), 0);
 
     return {
       id: `assembly-${solution.id}`,
       name: `${solution.elementType} Assembly`,
       components,
-      bounds: { min: actualMin, max: actualMax },
+      bounds: assemblyBounds,
       totalWeight,
       connectionPoints: [
         {
           id: 'base-anchor-1',
           type: 'anchor' as const,
-          position: actualMin,
+          position: startPos,
           normal: { x: 0, y: 0, z: -1 },
           parameters: { anchorType: 'expansion', diameter: 12 },
         },
@@ -518,35 +509,49 @@ export class MayhemAIPipeline {
   }
 
   /**
-   * Create mock component for geometry
+   * Create a component with specific bounds
    */
-  private createMockComponent(
+  private createStairComponent(
     name: string,
     elementType: string,
     material: string,
-    boundsMin: Point3D,
-    boundsMax: Point3D,
+    min: Point3D,
+    max: Point3D,
     weight: number
   ): GeometryResult {
-    const volume = (boundsMax.x - boundsMin.x) *
-                   (boundsMax.y - boundsMin.y) *
-                   (boundsMax.z - boundsMin.z) * 0.01; // Approximate
+    // Ensure min < max for each axis
+    const actualMin = {
+      x: Math.min(min.x, max.x),
+      y: Math.min(min.y, max.y),
+      z: Math.min(min.z, max.z),
+    };
+    const actualMax = {
+      x: Math.max(min.x, max.x),
+      y: Math.max(min.y, max.y),
+      z: Math.max(min.z, max.z),
+    };
+
+    const width = actualMax.x - actualMin.x;
+    const depth = actualMax.y - actualMin.y;
+    const height = actualMax.z - actualMin.z;
+    const volumeM3 = (width * depth * height) / 1e9;
+    const surfaceAreaM2 = 2 * (width * depth + width * height + depth * height) / 1e6;
 
     return {
-      id: `component-${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
+      id: `${elementType}-${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       shapeId: `shape-${Date.now()}`,
       name,
       elementType,
-      bounds: { min: boundsMin, max: boundsMax },
-      transform: { position: boundsMin, rotation: { x: 0, y: 0, z: 0 } },
+      bounds: { min: actualMin, max: actualMax },
+      transform: { position: actualMin, rotation: { x: 0, y: 0, z: 0 } },
       properties: {
-        volume,
-        surfaceArea: volume * 0.1,
+        volume: volumeM3,
+        surfaceArea: surfaceAreaM2,
         weight,
         centerOfMass: {
-          x: (boundsMin.x + boundsMax.x) / 2,
-          y: (boundsMin.y + boundsMax.y) / 2,
-          z: (boundsMin.z + boundsMax.z) / 2,
+          x: (actualMin.x + actualMax.x) / 2,
+          y: (actualMin.y + actualMax.y) / 2,
+          z: (actualMin.z + actualMax.z) / 2,
         },
       },
       material,
