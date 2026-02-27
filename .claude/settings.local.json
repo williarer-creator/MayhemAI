@@ -10,7 +10,8 @@
       "Bash(gh repo create:*)",
       "Bash(npx tsx:*)",
       "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsx:*)",
-      "Bash(npx ts-node:*)"
+      "Bash(npx ts-node:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
