@@ -487,8 +487,29 @@ export class NestingOptimizer {
     let currentSheet: NestedSheet | null = null;
     const placedParts: Set<number> = new Set();
 
+    // Filter out parts that are too large for any sheet
+    const fittableParts: typeof expandedParts = [];
+    const oversizedParts: typeof expandedParts = [];
+
+    for (const part of expandedParts) {
+      const fitsNormal = part.width <= sheetSize.width - spacing * 2 &&
+                         part.height <= sheetSize.height - spacing * 2;
+      const fitsRotated = allowRotation &&
+                          part.height <= sheetSize.width - spacing * 2 &&
+                          part.width <= sheetSize.height - spacing * 2;
+
+      if (fitsNormal || fitsRotated) {
+        fittableParts.push(part);
+      } else {
+        oversizedParts.push(part);
+        // Mark oversized parts as "placed" so they don't block the algorithm
+        placedParts.add(expandedParts.indexOf(part));
+      }
+    }
+
     // Simple bin packing algorithm
-    while (placedParts.size < expandedParts.length) {
+    const maxSheets = 100; // Safety limit
+    while (placedParts.size < expandedParts.length && sheets.length < maxSheets) {
       // Start new sheet
       currentSheet = {
         sheetIndex: sheets.length,
@@ -500,6 +521,7 @@ export class NestingOptimizer {
 
       // Create grid of available positions
       const usedAreas: Array<{ x: number; y: number; width: number; height: number }> = [];
+      let placedAny = false;
 
       for (let i = 0; i < expandedParts.length; i++) {
         if (placedParts.has(i)) continue;
@@ -534,7 +556,13 @@ export class NestingOptimizer {
           });
 
           placedParts.add(i);
+          placedAny = true;
         }
+      }
+
+      // If no parts were placed on this sheet, break to avoid infinite loop
+      if (!placedAny) {
+        break;
       }
 
       // Calculate efficiency

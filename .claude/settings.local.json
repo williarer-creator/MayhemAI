@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(grep:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nComplete Phase 3: Structure Domain\n\nAdd comprehensive structural engineering elements:\n\nBeams \\(beams.ts\\):\n- Steel beams with W-shapes, HSS, channels\n- Wood beams with dimensional lumber, glulam, LVL\n- Span calculations, deflection checks, moment/shear capacity\n- Support for simple, fixed, cantilever, and continuous spans\n\nColumns \\(columns.ts\\):\n- Steel columns with buckling analysis per AISC 360\n- Wood columns with stability factor per NDS\n- K-factor lookup for various end conditions\n- Slenderness checks and capacity calculations\n\nBase Plates \\(base-plates.ts\\):\n- Steel base plate design per AISC Design Guide 1\n- Anchor bolt calculations per ACI 318\n- Bearing pressure, plate bending, anchor tension/shear\n- Concrete breakout capacity checks\n\nBracing \\(bracing.ts\\):\n- Diagonal bracing \\(X-brace, chevron, single diagonal\\)\n- Horizontal bracing for diaphragms\n- Slenderness limits for tension/compression\n- SCBF seismic provisions support\n\nConnections \\(connections.ts\\):\n- Bolted connections \\(shear tab, double angle, end plate\\)\n- Welded connections \\(fillet, CJP, PJP\\)\n- Bolt shear, bearing, and block shear checks\n- Weld strength calculations per AWS D1.1\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh repo create:*)",
+      "Bash(npx tsx:*)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsx:*)",
+      "Bash(npx ts-node:*)"
+    ]
+  }
+}
